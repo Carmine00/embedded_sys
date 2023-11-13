@@ -18,6 +18,8 @@
 #define FIRST_ROW 0x80
 #define SECOND_ROW 0xC0
 #define BUFFER 16
+#define STATE_S5 5
+#define STATE_S6 7
 #include <xc.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -60,7 +62,7 @@ typedef struct{
 
 RingBuffer data_r;
 char data_uart;
-int count_char_SPI = 0, char_counter = 0, state_button;
+int count_char_SPI = 0, char_counter = 0, state = 0;
 
 void init_ring_buffer(){
     
@@ -347,7 +349,7 @@ void __attribute__ ((__interrupt__ , __auto_psv__)) _INT0Interrupt(){
     IFS0bits.INT0IF = 0;
     IEC0bits.INT0IE = 0;
     T3CONbits.TON = 1;
-    state_button = 5;
+    state = STATE_S5-1;
     
     
     
@@ -358,7 +360,7 @@ void __attribute__ ((__interrupt__ , __auto_psv__)) _INT1Interrupt(){
     IFS1bits.INT1IF= 0;
     IEC1bits.INT1IE = 0;
     T3CONbits.TON = 1;
-    state_button = 6;
+    state = STATE_S6-1;
     
 }
 
@@ -366,10 +368,18 @@ void __attribute__ ((__interrupt__ , __auto_psv__)) _T3Interrupt(){
     
     IFS0bits.T3IF = 0;
     
-    int i = 0;
+    if(PORTEbits.RE8 && state == STATE_S5-1){
+        state++;
+        }
+    
+        else if(PORTDbits.RD0 && state == STATE_S6-1){
+            state++;
+        }
+    
+    /*int i = 0;
     char number_char_received[4];
     
-    if(PORTEbits.RE8 && state_button == 5){
+    if(PORTEbits.RE8 && state == 5){
         sprintf(number_char_received, "%d", char_counter);
         while(number_char_received[i] != '\0'){
             write_UART(number_char_received[i]);
@@ -377,12 +387,13 @@ void __attribute__ ((__interrupt__ , __auto_psv__)) _T3Interrupt(){
         }
     }
     
-    else if(PORTDbits.RD0 && state_button == 6){
+    else if(PORTDbits.RD0 && state == 6){
         clear_SPI_row(SECOND_ROW);
         clear_SPI_row(FIRST_ROW);
         char_counter = 0;
         count_char_SPI = 0;
     }
+    */
     
     TMR3 = 0;
     T3CONbits.TON = 0;
@@ -408,8 +419,8 @@ int main(void) {
     init_button_S5();
     init_button_S6();
     init_UART();
-    char data_to_display;
-    int i;
+    char data_to_display, number_char_received[4];;
+    int i, j = 0;
     
     // cycle-period of the task
     tmr_setup_period(TIMER1, 10);
@@ -423,6 +434,24 @@ int main(void) {
         algorithm();
         
         //send_SPI_char(FIRST_ROW);
+    
+        if(state == STATE_S5){
+            sprintf(number_char_received, "%d", char_counter);
+            while(number_char_received[j] != '\0'){
+                write_UART(number_char_received[j]);
+                j++;
+            }
+            j = 0;
+            state = 0;
+        }
+    
+        else if(state == STATE_S6){
+            clear_SPI_row(SECOND_ROW);
+            clear_SPI_row(FIRST_ROW);
+            char_counter = 0;
+            count_char_SPI = 0;
+            state = 0;
+        }
         
         for(i=0; i<data_r.counter && data_r.head != data_r.tail; i++){
             
@@ -431,7 +460,8 @@ int main(void) {
             data_to_display = read_ring();
             if(data_to_display == (char)LF || data_to_display == (char)CR){
                 clear_SPI_row(FIRST_ROW);
-                count_char_SPI = 1;
+                //count_char_SPI = 1;
+                count_char_SPI = 0;
             }
 
             else{
@@ -445,6 +475,7 @@ int main(void) {
         
         //clear_SPI_second_row();
         
+        // DA SPOSTARE??
         create_send_string_second_row();
         
         //reset_ring();        
