@@ -14,6 +14,12 @@ int main(void) {
     
    // all analog pins are set to digital
    ANSELA = ANSELB = ANSELC = ANSELD = ANSELE = ANSELG = 0x0000;
+   
+   PLLFBD = 6; // M = 8
+   CLKDIVbits.PLLPOST = 0x00; // N1 = 2
+   CLKDIVbits.PLLPRE = 0x00; // N2 = 2
+   RCONbits.SWDTEN = 0; // Disable Watch Dog Timer
+   while (OSCCONbits.LOCK != 1) {};
     
    // set led as output
    TRISAbits.TRISA0 = 0;
@@ -25,10 +31,10 @@ int main(void) {
         LATAbits.LATA0 = !LATAbits.LATA0;
         
         // set timer and wait for period
-        tmr_wait_ms(TIMER1, 1000);
+        tmr_wait_ms(TIMER1, 2000);
 
         // toggle LED --> turn off
-        LATAbits.LATA0 = !LATAbits.LATA0;
+        /*LATAbits.LATA0 = !LATAbits.LATA0;
         
         // set timer and wait for period
         tmr_wait_ms(TIMER1, 5000);
@@ -38,6 +44,7 @@ int main(void) {
         
         // set timer and wait for period
         tmr_wait_ms(TIMER1, 500);
+        */
     }
     return 0;
 }

@@ -31,7 +31,7 @@
 #ifndef XC_TIMER_UTILS_H
 #define	XC_TIMER_UTILS_H
 
-#define F_CLK 8000000
+#define F_CLK 16000000
 #define F_CY F_CLK/2
 #define MAX_INT 65535
 #define TIMER1 1
@@ -98,6 +98,7 @@ void tmr_setup_period(int timer, int ms) {
             T2CONbits.T32 = 0;
             
             // reset interrupt timer 2
+            IEC0bits.T2IE = 1; // enable interrupt
             IFS0bits.T2IF = 0;
             
             T2CONbits.TON = 1;
