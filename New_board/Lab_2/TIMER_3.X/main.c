@@ -7,19 +7,18 @@
 
 
 #include <xc.h>
-#include "../../header/conf_bits.h"
 #include "../../header/timer_utils.h"
 
 int main(void) {
     
     // all analog pins are set to digital
    ANSELA = ANSELB = ANSELC = ANSELD = ANSELE = ANSELG = 0x0000;
-    
+   
    // set led as output
    TRISAbits.TRISA0 = 0;
-   LATAbits.LATA0 = 0;
+   LATAbits.LATA0 = 1;
    
-   tmr_setup_period(TIMER1, 1000);
+   tmr_setup_period(TIMER1, 3000);
    int delay = 250;
     
     while(1){

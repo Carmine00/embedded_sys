@@ -31,19 +31,25 @@
 #ifndef XC_TIMER_UTILS_H
 #define	XC_TIMER_UTILS_H
 
-#define F_CLK 16000000
+#define F_CLK 140000000
 #define F_CY F_CLK/2
 #define MAX_INT 65535
+#define MAX_PERIOD 200
+#define PRESCALE_SAT 256
+#define PRESCALE_BIN_SAT 3
 #define TIMER1 1
 #define TIMER2 2
 
-void tmr_setup_period(int timer, int ms) {
+float tmr_setup_period(int timer, int ms) {
     
     // set prescale
-    float prescale_f = (float)ms / 1000.0 * F_CY / (float)MAX_INT;
+    float prescale_f;
+    // maxinum loop cycle in 200ms
+    float num_cycle = 0.0;
     int prescale, prescale_binary;
     
-    
+    if(ms <= MAX_PERIOD){
+        prescale_f = (float)ms / 1000.0 * F_CY / (float)MAX_INT;
     if (prescale_f <= 1){
         prescale = 1;
         prescale_binary = 0;
@@ -60,8 +66,18 @@ void tmr_setup_period(int timer, int ms) {
         prescale = 256;
         prescale_binary = 3;
     }
-    else
-        ; // error to handle
+    configure_bit(timer, ms, prescale, prescale_binary);  
+   } else{
+        prescale = PRESCALE_SAT;
+        prescale_binary = PRESCALE_BIN_SAT;
+        num_cycle = (float)ms / MAX_PERIOD;
+        configure_bit(timer, MAX_PERIOD, prescale, prescale_binary);
+    }
+    
+    return num_cycle;
+}
+
+void configure_bit(int timer, int ms, int prescale, int prescale_binary){
     
     switch(timer){
         case TIMER1:
@@ -104,6 +120,9 @@ void tmr_setup_period(int timer, int ms) {
             T2CONbits.TON = 1;
             break;
     }
+
+
+
 }
 
 void tmr_wait_period(int timer){
@@ -121,8 +140,22 @@ void tmr_wait_period(int timer){
 }
 
 void tmr_wait_ms(int timer, int ms) {
-    tmr_setup_period(timer,ms);
-    tmr_wait_period(timer);
+    
+    float flag, diff;
+    int i = 0;
+    flag = tmr_setup_period(timer,ms);
+    
+    if (flag == 0.0)
+        tmr_wait_period(timer);
+    else{
+        diff = flag - (int)flag;
+        while(i != (int)flag){
+            tmr_wait_period(timer);
+            i = i + 1;
+        }
+        if(diff != 0.0)
+            tmr_wait_ms(timer, (int)(ms*diff));
+    }
 }
 
 

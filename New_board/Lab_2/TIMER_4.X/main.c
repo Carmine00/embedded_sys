@@ -7,8 +7,6 @@
 
 
 #include <xc.h>
-#include <xc.h>
-#include "../../header/conf_bits.h"
 #include "../../header/timer_utils.h"
 
 int main(void) {
@@ -32,15 +30,15 @@ int main(void) {
             else
                 button_press = 1;
             // start timer of 3s
-            tmr_setup_period(TIMER2, 3000);
+            //tmr_setup_period(TIMER2, 3000);
         }
-        if (button_new > button_old && IFS0bits.T2IF == 1){ // button released
+        /*if (button_new > button_old && IFS0bits.T2IF == 1){ // button released
             
             // check timer 3 second
             LATAbits.LATA0 = 0;
             button_press = 0;
             
-        }
+        }*/
         button_old = button_new;
         
         if (button_press){

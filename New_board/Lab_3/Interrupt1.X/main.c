@@ -7,7 +7,6 @@
 
 
 #include <xc.h>
-#include "../../header/conf_bits.h"
 #include "../../header/timer_utils.h"
 
 void __attribute__ ((__interrupt__ , __auto_psv__)) _T2Interrupt() {
@@ -21,15 +20,10 @@ int main(void) {
     // all analog pins are set to digital
     ANSELA = ANSELB = ANSELC = ANSELD = ANSELE = ANSELG = 0x0000;
     
-    PLLFBD = 6; // M = 8
-    CLKDIVbits.PLLPOST = 0x00; // N1 = 2
-    CLKDIVbits.PLLPRE = 0x00; // N2 = 2
-    RCONbits.SWDTEN = 0; // Disable Watch Dog Timer
-    while (OSCCONbits.LOCK != 1) {};
-    
+    INTCON2bits.GIE = 1; // set global intterupt  enable
+    INTCON2bits.INT1EP = 1; // intterupt on negative edge
+    IFS0bits.T2IF = 0; // clear interrupt flag
     IEC0bits.T2IE = 1; // enable interrupt
-    INTCON2bits.GIE = 1; 
-    INTCON2bits.INT1EP = 1; 
     
     TRISAbits.TRISA0 = 0; // set A0 led as output pin
     LATAbits.LATA0 = 1;
