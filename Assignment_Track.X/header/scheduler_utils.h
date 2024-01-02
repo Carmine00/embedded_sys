@@ -34,15 +34,17 @@
 #include <xc.h> // include processor files - each processor file is guarded.  
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 #include "uart_utils.h"
 #include "ADC_utils.h"
 #include "buffer_utils.h"
 #include "PWM_utils.h"
 #include "update_state_utils.h"
+#include "protocol_utils.h"
 #include "constants.h"
 
 int state = WAIT_FOR_START;
-double dist;
+double dist, val_min, val_max;
 
 typedef struct {
 int n;
@@ -69,11 +71,15 @@ void scheduler_init(){
                     schedInfo[i].N = 100;   // 100 ms = 10 hz
                     schedInfo[i].n = 0;
                     break;
-                case 2: // battery
+                case 2:  // minth/maxth threshold update
+                    schedInfo[i].N = 100;   // 100 ms = 10 hz
+                    schedInfo[i].n = 0;
+                    break;
+                case 3: // battery
                     schedInfo[i].N = 1000; // 1000 ms = 1 hz
                     schedInfo[i].n = 0;
                     break;
-                case 3: // control
+                case 4: // control
                     schedInfo[i].N = 1;  // 1 ms = 1 khz
                     schedInfo[i].n = 0;
                     break;
@@ -84,10 +90,10 @@ void scheduler_init(){
 void task_motors(){ 
     
    sprintf(tmp_buffer,"$MPWM,%d,%d,%d,%d*", OC1R, OC2R, OC3R, OC4R);
-   write_ring(tmp_buffer);
+   write_ringTX(tmp_buffer);
    
    while(U1STAbits.UTXBF == 0) // meglio usare il TRMT e/o mettere un if invece di un while?
-        U1TXREG = read_ring();
+        U1TXREG = read_ringTX();
     
 }
 
@@ -101,11 +107,39 @@ void task_IR(){
         dist = 2.34 - 4.74 * volt + 4.06 * powf(volt,2) - 1.60 * powf(volt,3) + 0.24 * powf(volt,4);
         
         sprintf(tmp_buffer,"%.3f*",dist);
-        write_ring(tmp_buffer);
+        write_ringTX(tmp_buffer);
         
         while(U1STAbits.UTXBF == 0)
-            U1TXREG = read_ring();
+            U1TXREG = read_ringTX();
     }
+}
+
+void task_threshold(){
+    
+    char data_rcv;
+    int ret, threshold_min, threshold_max; 
+    parser_state pstate;
+    pstate.state = STATE_DOLLAR;
+    pstate.index_type = 0;
+    pstate.index_payload = 0;
+    
+    
+    while(data_RX.head != data_RX.tail){
+            
+            data_rcv = read_ringRX();
+            ret = parse_byte(&pstate, data_rcv);
+            if (ret == NEW_MESSAGE){
+                if (strcmp(pstate.msg_type, MSG_INFO) == 0) {
+                    sscanf(pstate.msg_payload,"%d,%d",&threshold_min,&threshold_max);
+                    val_min = (double)threshold_min/100.0;
+                    val_max = (double)threshold_max/100.0;
+                    
+                } else if (ret == ERR_MESSAGE)
+                    write_ringTX(ack_err);
+        }
+    }
+    
+   
 }
 
 void task_battery(){
@@ -118,10 +152,10 @@ void task_battery(){
              //U1TXREG = printf("distance: %f and volt: %f", dist,volt*3);
 
         sprintf(tmp_buffer,"$MBATT,%.2f*",volt_battery * 3);
-        write_ring(tmp_buffer);
+        write_ringTX(tmp_buffer);
 
         while(U1STAbits.UTXBF == 0)
-            U1TXREG = read_ring();
+            U1TXREG = read_ringTX();
     }
 }
 
@@ -140,7 +174,7 @@ void task_control(){
         
         LATAbits.LATA0 = 1;
         
-        if(dist > MAXTH){
+        if(dist > val_max){
             surge_left = 1; 
             surge_right = 1;
             //forward
@@ -148,17 +182,17 @@ void task_control(){
         }
             
             
-        else if(dist <= MAXTH && dist >= MINTH){
+        else if(dist <= val_max && dist >= val_min){
             //proportional law combining forward and turning
             surge_left = 1; 
-            surge_right = (dist - (float)MINTH) / (float)(MAXTH - MINTH);
+            surge_right = (dist - (float)val_min) / (float)(val_max - val_min);
             
             forward(surge_left, surge_right);
             
         }
             
             
-        else if(dist < MINTH){
+        else if(dist < val_min){
             // turning
             yaw_rate = 1;
             
@@ -185,9 +219,12 @@ void scheduler() {
                     task_IR();
                     break;
                 case 2:
-                    task_battery();
+                    task_threshold();
                     break;
                 case 3:
+                    task_battery();
+                    break;
+                case 4:
                     task_control();
                     break;
             }

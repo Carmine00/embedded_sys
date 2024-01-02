@@ -38,14 +38,19 @@
 #define NEW_MESSAGE (1) // new message received and parsed completely
 #define NO_MESSAGE (0) // no new messages
 #define ERR_MESSAGE (-1)
+#define MSG_INFO "PCTH"
+#define DIM_TYPE 5 // type is 4 chars (PCTH) + string terminator
+#define DIM_PAYLOAD 7 // payload is 7 chars (2 chars per 2 int numbers, one comma, one * and then end of string)
 
 typedef struct {
 int state;
-char msg_type[3]; // type is 2 chars + string terminator
-char msg_payload[100]; // assume payload cannot be longer than 100 chars
+char msg_type[DIM_TYPE]; 
+char msg_payload[DIM_PAYLOAD]; 
 int index_type;
 int index_payload;
 } parser_state;
+
+char ack_err[] = "ERR";
 
 int parse_byte(parser_state* ps, char byte){
     
@@ -61,9 +66,10 @@ int parse_byte(parser_state* ps, char byte){
                 ps->state = STATE_PAYLOAD;
                 ps->msg_type[ps->index_type] = '\0';
                 ps->index_payload = 0; // initialize properly the index
-            } else if (ps->index_type == 3) { // error!
+            } else if (ps->index_type == DIM_TYPE) { // error!
                 ps->state = STATE_DOLLAR;
                 ps->index_type = 0;
+                return ERR_MESSAGE;
             } else if (byte == '.'){
                 ps->state = STATE_DOLLAR;
                 ps->index_type = 0;
@@ -78,9 +84,10 @@ int parse_byte(parser_state* ps, char byte){
                 ps->state = STATE_DOLLAR; // get ready for a new message
                 ps->msg_payload[ps->index_payload] = '\0';
                 return NEW_MESSAGE;
-            } else if (ps->index_payload == 100) { // error
+            } else if (ps->index_payload == DIM_PAYLOAD){ // error
                 ps->state = STATE_DOLLAR;
                 ps->index_payload = 0;
+                return ERR_MESSAGE;
             } else {
                 ps->msg_payload[ps->index_payload] = byte; // ok!
                 ps->index_payload++; // increment for the next time;

@@ -35,28 +35,46 @@
 #include "constants.h"
 
 typedef struct{
-    char buf[BUFFER];
+    char buf[BUFFER_TX];
     int head;
     int tail;
-} RingBuffer;
+} RingBufferTX;
 
-RingBuffer data_r;
+typedef struct{
+    char buf[BUFFER_RX];
+    int head;
+    int tail;
+} RingBufferRX;
+
+// dedicated buffer for transmission
+RingBufferTX data_TX;
+// dedicated buffer for receveing
+RingBufferRX data_RX;
+
+void __attribute__ ((__interrupt__ , __auto_psv__)) _U1RXInterrupt() {
+    IFS0bits.U1RXIF = 0; // reset interrupt flag
+    
+    write_ringRX((char)U1RXREG); 
+}
 
 void init_ring_buffer(){
     
-    data_r.head = 0;
-    data_r.tail = 0;
+    data_TX.head = 0;
+    data_TX.tail = 0;
+    
+    data_RX.head = 0;
+    data_RX.tail = 0;
 }
 
-void write_ring(char *data_tx){
+void write_ringTX(char *sensor_data){
     
     // atomic access to buffer
     IEC0bits.U1TXIE = 0;  // disable interrupt of tx uart  // va disabilitato anche l'interrupt del bottone e quello del rx uart?
     int i=0;
     
-    while(data_tx[i]!='\0'){
-        data_r.buf[data_r.head] = data_tx[i];
-        data_r.head = (data_r.head + 1) % BUFFER;
+    while(sensor_data[i]!='\0'){
+        data_TX.buf[data_TX.head] = sensor_data[i];
+        data_TX.head = (data_TX.head + 1) % BUFFER_TX;
         i++;
     }
     
@@ -64,17 +82,44 @@ void write_ring(char *data_tx){
     
 }
 
-char read_ring(){
+char read_ringTX(){
     
     // atomic access to buffer
     IEC0bits.U1TXIE = 0;  
     
     char data;
     
-    data = data_r.buf[data_r.tail];
-    data_r.tail = (data_r.tail + 1) % BUFFER;
+    data = data_TX.buf[data_TX.tail];
+    data_TX.tail = (data_TX.tail + 1) % BUFFER_TX;
     
     IEC0bits.U1TXIE = 1;
+    
+    return data;
+}
+
+void write_ringRX(char data){
+    
+    // atomic access to buffer
+    IEC0bits.U1RXIE = 0;
+    
+    data_RX.buf[data_RX.head] = data;
+    data_RX.head = (data_RX.head + 1) % BUFFER_RX;
+    
+    IEC0bits.U1RXIE = 1;
+    
+}
+
+char read_ringRX(){
+    
+    // atomic access to buffer
+    IEC0bits.U1RXIE = 0;
+    
+    char data;
+    
+    data = data_RX.buf[data_RX.tail];
+    data_RX.tail = (data_RX.tail + 1) % BUFFER_RX;
+    
+    IEC0bits.U1RXIE = 1;
     
     return data;
 }
