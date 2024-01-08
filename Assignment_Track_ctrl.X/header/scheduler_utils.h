@@ -34,6 +34,7 @@
 #include <xc.h> // include processor files - each processor file is guarded.  
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 #include "uart_utils.h"
 #include "ADC_utils.h"
 #include "buffer_utils.h"
@@ -41,9 +42,10 @@
 #include "update_state_utils.h"
 #include "lights_utils.h"
 #include "constants.h"
+#include "protocol_utils.h"
 
 int state = WAIT_FOR_START;
-float dist = 0;
+float dist = 0, val_min, val_max;
 float surge = 0;
 float yaw = 0;
 
@@ -83,13 +85,18 @@ void scheduler_init(){
                 schedInfo[i].N = 100;
                 schedInfo[i].n = 0;
                 break;
-
-            case 4: // control
+            
+            case 4:  // minth/maxth threshold update
+                schedInfo[i].N = 100;   // 100 ms = 10 hz
+                schedInfo[i].n = 0;
+                break;
+                
+            case 5: // control
                 schedInfo[i].N = 1;
                 schedInfo[i].n = 0;
                 break;
 
-            case 5: // side lights
+            case 6: // side lights
                 schedInfo[i].N = 1000;
                 schedInfo[i].n = 0;
                 break;
@@ -105,7 +112,7 @@ void task_motors(){
    int dc4 = dc3;
     
    sprintf(tmp_buffer,"$MPWM,%d,%d,%d,%d*",dc1,dc2,dc3,dc4);
-   write_ring(tmp_buffer);
+   write_ringTX(tmp_buffer);
 }
 
 void task_IR(){
@@ -121,15 +128,39 @@ void task_IR(){
         
         // print distance in cm
         sprintf(tmp_buffer,"$MDIST,%d*",(int)(dist*100));
-        write_ring(tmp_buffer);
+        write_ringTX(tmp_buffer);
     }
 }
 
 void task_sendUART(){
     
     while(U1STAbits.UTXBF == 0)
-        U1TXREG = read_ring();
+        U1TXREG = read_ringTX();
     //LATAbits.LATA0 = !LATAbits.LATA0;
+}
+
+void task_threshold(){
+    
+    char data_rcv;
+    int ret, threshold_min, threshold_max; 
+    
+    
+    while(data_RX.head != data_RX.tail){
+            
+            data_rcv = read_ringRX();
+            ret = parse_byte(&pstate, data_rcv);
+            if (ret == NEW_MESSAGE){
+                if (strcmp(pstate.msg_type, MSG_INFO) == 0) {
+                    sscanf(pstate.msg_payload,"%d,%d",&threshold_min,&threshold_max);
+                    val_min = (double)threshold_min/100.0;
+                    val_max = (double)threshold_max/100.0;
+                    
+                } else if (ret == ERR_MESSAGE)
+                    write_ringTX(ack_err);
+        }
+    }
+    
+   
 }
 
 void task_battery(){
@@ -141,7 +172,7 @@ void task_battery(){
         //U1TXREG = printf("distance: %f and volt: %f", dist,volt*3);
     
    sprintf(tmp_buffer,"$MBATT,%.2f*",(double)(3*volt_battery));
-   write_ring(tmp_buffer);
+   write_ringTX(tmp_buffer);
 
 }
 
@@ -182,17 +213,17 @@ void task_control(){
     
     else if(state == MOVING){
         
-        if(dist > MAXTH){
+        if(dist > val_max){
             surge = 1;
             yaw = 0;
         }
             
-        else if(dist <= MAXTH && dist >= MINTH){
-            surge = (dist - MINTH) / (MAXTH - MINTH);
-            yaw = (MAXTH - dist) / (MAXTH - MINTH);
+        else if(dist <= val_max && dist >= val_min){
+            surge = (dist - val_min) / (val_max - val_min);
+            yaw = (val_max - dist) / (val_max - val_min);
         }
         
-        else if(dist < MINTH){
+        else if(dist < val_min){
             surge = 0;
             yaw = 1;
         }
@@ -223,10 +254,13 @@ void scheduler() {
                     task_sendUART();
                     break;
                 case 4:
+                    task_threshold();
+                    break;
+                case 5:
                     task_control();
                     head_rear_lights(state, surge, yaw);
                     break;
-                case 5:
+                case 6:
                     side_lights(state, surge, yaw);
                     break;
             }

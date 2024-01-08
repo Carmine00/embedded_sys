@@ -15,6 +15,7 @@
 #include "header/PWM_utils.h"
 #include "header/update_state_utils.h"
 #include "header/lights_utils.h"
+#include "header/protocol_utils.h"
 #include "header/constants.h"
 
 int main(void) {
@@ -30,6 +31,7 @@ int main(void) {
     ADC_config();
     PWM_config();
     lights_config();
+    protocol_init();
     scheduler_init();
     
     while(1){    
