@@ -51,12 +51,6 @@ RingBufferTX data_TX;
 // dedicated buffer for receveing
 RingBufferRX data_RX;
 
-void __attribute__ ((__interrupt__ , __auto_psv__)) _U1RXInterrupt() {
-    IFS0bits.U1RXIF = 0; // reset interrupt flag
-    
-    write_ringRX((char)U1RXREG); 
-}
-
 void init_ring_buffer(){
     
     data_TX.head = 0;
@@ -68,13 +62,17 @@ void init_ring_buffer(){
 
 void write_ringTX(char *sensor_data){
     
+   
+    
     int i=0;
     
     while(sensor_data[i]!='\0'){
         data_TX.buf[data_TX.head] = sensor_data[i];
         data_TX.head = (data_TX.head + 1) % BUFFER_TX;
         i++;
-    }    
+    }
+
+    
 }
 
 char read_ringTX(){
@@ -106,6 +104,12 @@ char read_ringRX(){
     data_RX.tail = (data_RX.tail + 1) % BUFFER_RX;
     
     return data;
+}
+
+void __attribute__ ((__interrupt__ , __auto_psv__)) _U1RXInterrupt() {
+    IFS0bits.U1RXIF = 0; // reset interrupt flag
+    
+    write_ringRX((char)U1RXREG); 
 }
 
 #endif	/* XC_HEADER_TEMPLATE_H */

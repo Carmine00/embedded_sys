@@ -37,6 +37,16 @@
 #define FPWM 10000
 #define OCRS FCY/FPWM
 
+typedef struct{
+    int oc1r;
+    int oc2r;
+    int oc3r;
+    int oc4r;
+    
+} PWMinfo;
+
+PWMinfo ocr_data;
+
 void PWM_config(){
     
     OC1CON1bits.OCTSEL = 7;    // perpheral clock used as source for output compare
@@ -63,6 +73,11 @@ void PWM_config(){
     OC3R = 0;
     OC4R = 0;              // Duty cycle = Max PTPER
     
+    ocr_data.oc1r = OC1R;
+    ocr_data.oc2r = OC2R;
+    ocr_data.oc3r = OC3R;
+    ocr_data.oc4r = OC4R;
+    
     RPOR0bits.RP65R = 0x10;  // mapping pin out rd1-rd2-rd3-rd4
     RPOR1bits.RP66R = 0x11;
     RPOR1bits.RP67R = 0x12;
@@ -75,6 +90,11 @@ void shutdown_motors(){
     OC2R = 0; 
     OC3R = 0;
     OC4R = 0; 
+    
+    ocr_data.oc1r = OC1R;
+    ocr_data.oc2r = OC2R;
+    ocr_data.oc3r = OC3R;
+    ocr_data.oc4r = OC4R;
 }
 
 void move(float ctrl_left, float ctrl_right) {
@@ -93,6 +113,11 @@ void move(float ctrl_left, float ctrl_right) {
         OC3R = (unsigned int)(-ctrl_right * OCRS);
         OC4R = 0;
     }
+    
+    ocr_data.oc1r = OC1R;
+    ocr_data.oc2r = OC2R;
+    ocr_data.oc3r = OC3R;
+    ocr_data.oc4r = OC4R;
 }
 
 #endif	/* XC_HEADER_TEMPLATE_H */

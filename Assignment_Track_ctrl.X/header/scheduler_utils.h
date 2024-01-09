@@ -45,7 +45,7 @@
 #include "protocol_utils.h"
 
 int state = WAIT_FOR_START;
-float dist = 0, val_min, val_max;
+float dist = 0, val_min = MINTH, val_max = MAXTH;
 float surge = 0;
 float yaw = 0;
 
@@ -55,7 +55,7 @@ int N;
 } heartbeat;
 
 heartbeat schedInfo[MAX_TASKS];
-char tmp_buffer[19];
+char tmp_buffer[25];
 
 void scheduler_init(){
     
@@ -80,23 +80,18 @@ void scheduler_init(){
                 schedInfo[i].N = 1000;
                 schedInfo[i].n = 0;
                 break;
-                
-            case 3: // uart
-                schedInfo[i].N = 100;
-                schedInfo[i].n = 0;
-                break;
             
-            case 4:  // minth/maxth threshold update
+            case 3:  // minth/maxth threshold update
                 schedInfo[i].N = 100;   // 100 ms = 10 hz
                 schedInfo[i].n = 0;
                 break;
                 
-            case 5: // control
+            case 4: // control
                 schedInfo[i].N = 1;
                 schedInfo[i].n = 0;
                 break;
 
-            case 6: // side lights
+            case 5: // side lights
                 schedInfo[i].N = 1000;
                 schedInfo[i].n = 0;
                 break;
@@ -106,13 +101,17 @@ void scheduler_init(){
 
 void task_motors(){
    
-   int dc1 = (int)(100*(surge + yaw));
+   /*int dc1 = (int)(100*(surge + yaw));
    int dc2 = dc1;
    int dc3 = (int)(100*(surge - yaw));
    int dc4 = dc3;
-    
-   sprintf(tmp_buffer,"$MPWM,%d,%d,%d,%d*",dc1,dc2,dc3,dc4);
+   */ 
+     
+   //sprintf(tmp_buffer,"$MPWM,%d,%d,%d,%d*",dc1,dc2,dc3,dc4);
+   sprintf(tmp_buffer,"$MPWM,%d,%d,%d,%d*",ocr_data.oc1r, ocr_data.oc2r, ocr_data.oc3r, ocr_data.oc4r);
    write_ringTX(tmp_buffer);
+   
+   write_uart(strlen(tmp_buffer));
 }
 
 void task_IR(){
@@ -129,15 +128,19 @@ void task_IR(){
         // print distance in cm
         sprintf(tmp_buffer,"$MDIST,%d*",(int)(dist*100));
         write_ringTX(tmp_buffer);
+        
+        write_uart(strlen(tmp_buffer));
+        
+        
     }
 }
 
-void task_sendUART(){
+/*void task_sendUART(){
     
-    while(U1STAbits.UTXBF == 0)
+    while(U1STAbits.UTXBF == 0 && data_TX.head != data_TX.tail)
         U1TXREG = read_ringTX();
     //LATAbits.LATA0 = !LATAbits.LATA0;
-}
+}*/
 
 void task_threshold(){
     
@@ -154,6 +157,7 @@ void task_threshold(){
                     sscanf(pstate.msg_payload,"%d,%d",&threshold_min,&threshold_max);
                     val_min = (double)threshold_min/100.0;
                     val_max = (double)threshold_max/100.0;
+                    write_ringTX(ack_rcv);
                     
                 } else if (ret == ERR_MESSAGE)
                     write_ringTX(ack_err);
@@ -173,6 +177,7 @@ void task_battery(){
     
    sprintf(tmp_buffer,"$MBATT,%.2f*",(double)(3*volt_battery));
    write_ringTX(tmp_buffer);
+   write_uart(strlen(tmp_buffer));
 
 }
 
@@ -251,22 +256,20 @@ void scheduler() {
                     task_battery();
                     break;
                 case 3:
-                    task_sendUART();
-                    break;
-                case 4:
                     task_threshold();
                     break;
-                case 5:
+                case 4:
                     task_control();
                     head_rear_lights(state, surge, yaw);
                     break;
-                case 6:
+                case 5:
                     side_lights(state, surge, yaw);
                     break;
             }
             schedInfo[i].n = 0;
         }
     }
+    
 }
 
 #endif	/* XC_HEADER_TEMPLATE_H */

@@ -1,4 +1,4 @@
-/*
+ /*
  * File:   main.c
  * Authors: Luca Petruzzello (s5673449), Carmine Miceli (s5626492), Davide Cattin (s5544178)
  *
@@ -25,7 +25,7 @@ int main(void) {
     
     // set led RA0 as output
     TRISAbits.TRISA0 = 0;
-    LATAbits.LATA0 = 1;
+    LATAbits.LATA0 = 0;
     
     UART_config(UART_USE);
     ADC_config();

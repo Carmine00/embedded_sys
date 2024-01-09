@@ -40,7 +40,7 @@
 #define OCRS FCY/FPWM
 
 // Control loop
-#define MAX_TASKS 7
+#define MAX_TASKS 6
 #define WAIT_FOR_START 0
 #define MOVING 1
 #define MINTH 0.15
@@ -50,8 +50,8 @@
 #define UART_USE 1
 
 // initial value 292
-#define BUFFER_TX 305
-#define BUFFER_RX 13
+#define BUFFER_TX 330
+#define BUFFER_RX 15
 #define TRUE 1
 #define FALSE 0
 

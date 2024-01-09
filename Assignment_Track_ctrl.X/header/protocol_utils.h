@@ -54,6 +54,7 @@ int index_payload;
 parser_state pstate;
 
 char ack_err[] = "ERR";
+char ack_rcv[] = "RCV";
 
 void protocol_init(){
     pstate.state = STATE_DOLLAR;

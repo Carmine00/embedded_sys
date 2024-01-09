@@ -33,7 +33,8 @@
 
 #include <xc.h> // include processor files - each processor file is guarded.  
 #include "timer_utils.h"
-#define BAUD 38400
+#include "buffer_utils.h"
+#define BAUD 9600
 
 // function to perform input/output remapping and configuration based on the UART used 
 void UART_config(int val){
@@ -61,6 +62,17 @@ void UART_config(int val){
             U2STAbits.URXISEL = 0; // generate interrupt everytime a character is received
             IEC1bits.U2RXIE = 1; // enable uart 2 RX intterupt
     }
+}
+
+void write_uart(int len){
+    
+    int i = 0;
+    while(i < len){
+            while(U1STAbits.UTXBF == 0 && data_TX.head != data_TX.tail){
+                U1TXREG = read_ringTX();
+                i++;
+            }
+        }
 }
 
 #endif	/* XC_HEADER_TEMPLATE_H */
