@@ -73,10 +73,10 @@ void PWM_config(){
     OC3R = 0;
     OC4R = 0;              // Duty cycle = Max PTPER
     
-    ocr_data.oc1r = OC1R;
-    ocr_data.oc2r = OC2R;
-    ocr_data.oc3r = OC3R;
-    ocr_data.oc4r = OC4R;
+    ocr_data.oc1r = (int)(((float)OC1R/(float)OC1RS)*100);
+    ocr_data.oc2r = (int)(((float)OC2R/(float)OC2RS)*100);
+    ocr_data.oc3r = (int)(((float)OC3R/(float)OC3RS)*100);
+    ocr_data.oc4r = (int)(((float)OC4R/(float)OC4RS)*100);
     
     RPOR0bits.RP65R = 0x10;  // mapping pin out rd1-rd2-rd3-rd4
     RPOR1bits.RP66R = 0x11;
@@ -91,10 +91,10 @@ void shutdown_motors(){
     OC3R = 0;
     OC4R = 0; 
     
-    ocr_data.oc1r = OC1R;
-    ocr_data.oc2r = OC2R;
-    ocr_data.oc3r = OC3R;
-    ocr_data.oc4r = OC4R;
+    ocr_data.oc1r = (int)(((float)OC1R/(float)OC1RS)*100);
+    ocr_data.oc2r = (int)(((float)OC2R/(float)OC2RS)*100);
+    ocr_data.oc3r = (int)(((float)OC3R/(float)OC3RS)*100);
+    ocr_data.oc4r = (int)(((float)OC4R/(float)OC4RS)*100);
 }
 
 void move(float ctrl_left, float ctrl_right) {
@@ -114,10 +114,10 @@ void move(float ctrl_left, float ctrl_right) {
         OC4R = 0;
     }
     
-    ocr_data.oc1r = OC1R;
-    ocr_data.oc2r = OC2R;
-    ocr_data.oc3r = OC3R;
-    ocr_data.oc4r = OC4R;
+    ocr_data.oc1r = (int)(((float)OC1R/(float)OC1RS)*100);
+    ocr_data.oc2r = (int)(((float)OC2R/(float)OC2RS)*100);
+    ocr_data.oc3r = (int)(((float)OC3R/(float)OC3RS)*100);
+    ocr_data.oc4r = (int)(((float)OC4R/(float)OC4RS)*100);
 }
 
 #endif	/* XC_HEADER_TEMPLATE_H */
